@@ -1,6 +1,6 @@
 # Advanced_Scientific_Programming_with_Python_Project
 
-General Problem Statement:
+## General Problem Statement:
 
 Tumor lesions are the leading causes of death worldwide. Early detection of tumors can improve the overall survival of patients. Manual annotation of tumors is highly laborious and time-consuming. We plan to develop an end-to-end automated framework for the segmentation of tumors and their metastases from whole-body PET/CT scans using deep learning.
 
