@@ -12,4 +12,12 @@ The current piece of code is not very organized without any documentation (Hard 
 
 My intent here is to convert this piece of code into a python package by having separate modules, classes, functions and add proper documentations (wherever necessary). I am also planning to use high performance computing (such as GPU acceleration) and parallel programming (multi-processing) to fastract some of the computations. Finally, I also plan to optimize the overall framework for 3D tumor segmentation. Additionally, I am also planning to include better visualization tools (related to the General Problem Statement), that will be helpful during visualization.
 
+## Contribution:
+* Transforming ugly looking code to python libraries. 
+* Adding documentation.
+* Adding proper test function.
+* Optimizing the code.
+* Making the code easy to read.
+* Packaging.
+
 ## References:
