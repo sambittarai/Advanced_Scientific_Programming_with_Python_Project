@@ -296,7 +296,6 @@ def main():
 					norm=Norm.BATCH,
 					dropout=0,
 				).to(device)
-		
 
 		loss_function = DiceLoss(include_background=False, to_onehot_y=True, softmax=True, batch=True)
 		optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00001)
