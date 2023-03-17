@@ -1,5 +1,8 @@
 import os
 from tqdm import tqdm
+from monai.inferers import sliding_window_inference
+import numpy as np
+from monai.data import CacheDataset, list_data_collate, decollate_batch, DataLoader, Dataset, SmartCacheDataset
 
 def make_dirs(path, k):
 	path_CV = os.path.join(path, "CV_" + str(k))
@@ -35,6 +38,53 @@ def train(model, train_loader, optimizer, loss_function, device):
 	epoch_loss /= step
 
 	return epoch_loss
+
+def get_patient_id(files):
+	pat_scan = files['SUV'].split('PETCT_')[-1]
+	pat_id = 'PETCT_' + pat_scan.split('/')[0]
+	scan_date = pat_scan.split('/')[1]
+	return pat_id, scan_date
+
+def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
+	"""
+	Computes, DICE, TP, FP, FN.
+	Also Computes the Final Score, i.e. (0.5*DICE + 0.25*FP + 0.25*FN)
+	"""
+	pred = np.where(pred>1, 1, pred)
+
+	if len(np.unique(GT)) == 1:
+		dice = 11
+		TP = 0
+		disease_type = "Normal_Scan"
+	else:
+		dice = np.sum(pred[GT==1])*2.0 / (np.sum(pred) + np.sum(GT))
+		TP = np.where(GT != pred, 0, GT)
+		disease_type = "Tumorous_Scan"
+
+	#TP = np.where(GT != pred, 0, GT)
+	FP = pred - GT
+	FP = np.where(FP == -1, 0, FP)
+	FN = GT - pred
+	FN = np.where(FN == -1, 0, FN)
+
+	if np.count_nonzero(GT == 1) == 0:
+		denominator = 1
+	else:
+		denominator = np.count_nonzero(GT == 0)
+
+	tp_freq = np.count_nonzero(TP == 1)
+	tp_percent = tp_freq/denominator
+	fp_freq = np.count_nonzero(FP == 1)
+	fp_percent = fp_freq/denominator
+	fn_freq = np.count_nonzero(FN == 1)
+	fn_percent = fn_freq/denominator
+
+	if not os.path.isfile(path):
+		with open(path, "w") as f:
+			f.write("ID,scan_date,DISEASE_TYPE,DICE,TP,TP_%,FP,FP_%,FN,FN_%")
+	writeTxtLine(path, [pat_ID,scan_date,disease_type,dice,tp_freq,tp_percent,fp_freq,fp_percent,fn_freq,fn_percent])
+
+	return dice, fp_freq, fn_freq
 
 def validation(args, epoch, optimizer, post_pred, post_label, model, val_loader, device, dice_metric, metric_values, best_metric, k, val_files, path_Output):
 	model.eval()
