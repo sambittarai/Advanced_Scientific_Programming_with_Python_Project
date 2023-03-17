@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from tqdm import tqdm
 import pandas as pd
 from monai.transforms import (
@@ -23,14 +24,75 @@ from monai.networks.layers import Norm
 import matplotlib.pyplot as plt
 from monai.metrics import DiceMetric, compute_meandice
 from monai.data import CacheDataset, list_data_collate, decollate_batch, DataLoader, Dataset, SmartCacheDataset
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from monai.networks.nets import UNet
 from monai.losses import DiceLoss
 from monai.inferers import sliding_window_inference
-
 import warnings
 warnings.filterwarnings("ignore")
 #torch.multiprocessing.set_sharing_strategy('file_system')
+
+from pytorch_dataloader import prepare_data
+import sys
+sys.path.insert(0, '/media/sambit/Seagate Expansion Drive/G/Uppsala University/Courses/Semesters/2023/1_January_July/Advanced Scientific Programming with Python/Project/Advanced_Scientific_Programming_with_Python_Project')
+from config import parse_args
+from network_architecture import build_network
+
+
+def main(args):
+	#Path Initialization
+	path_df_filtered = args.path_df_patients_with_tumors
+	df_filtered = pd.read_csv(path_df_filtered)
+	path_Output = args.path_CV_Output
+
+	#Cross validation parameters initialization
+	K = args.K_fold_CV
+	max_epochs = args.max_epochs
+	val_interval = args.validation_interval
+	best_metric = args.best_metric
+
+	for k in tqdm(range(K)):
+		print("Cross Valdation for fold: {}".format(k))
+		#GPU configuration
+		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		#Building the network architecture
+		model = build_network(args, device)
+		#Optimization
+		loss_function = DiceLoss(include_background=False, to_onehot_y=True, softmax=True, batch=True)
+		optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+		lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs)
+		dice_metric = DiceMetric(include_background=False, reduction="mean")
+
+		#Create all the relevant directories
+		make_dirs(path_Output, k)
+		#Dataloader Preparation
+		if k == (K - 1):
+			df_val = df_filtered[100*k:].reset_index(drop=True)
+		else:
+			df_val = df_filtered[100*k:100*k+100].reset_index(drop=True)
+		df_train = df_filtered[~df_filtered.scan_date.isin(df_val.scan_date)].reset_index(drop=True)
+		train_loader, val_loader, val_files = prepare_data(df_train, df_val)
+
+		post_pred = Compose([EnsureType(), AsDiscrete(argmax=True, to_onehot=2)])
+		post_label = Compose([EnsureType(), AsDiscrete(to_onehot=2)])
+
+		
+		for epoch in range(max_epochs):
+			#epoch += 7
+			#Training
+			epoch_loss = train(model, train_loader, optimizer, loss_function, device)
+			lr_scheduler.step()
+			#epoch_loss_values.append(epoch_loss)
+			print(f"Training epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+			#Validation
+			if (epoch + 1) % val_interval == 0:
+				metric_values, best_metric_new = validation(epoch, optimizer, post_pred, post_label, model, val_loader, device, dice_metric, metric_values, best_metric, k, val_files, path_Output)
+				best_metric = best_metric_new
+
+			#Save and plot DICE
+			np.save(os.path.join(path_Output, "CV_" + str(k) + "/DICE.npy"), metric_values)
+			path_dice = os.path.join(path_Output, "CV_" + str(k), "epoch_vs_dice.jpg")
+			if len(metric_values) > 2:
+				plot_dice(metric_values, path_dice)
 
 def prepare_data(df_train, df_val):
 	CT_train = sorted(df_train['CT'].tolist())
@@ -273,70 +335,9 @@ def plot_dice(dice, path):
 	plt.xlabel("Number of Epochs")
 	plt.ylabel("DICE")
 
-def main():
-	K = 5
-	path_df_filtered = "/media/sambit/HDD/Sambit/Projects/U-CAN/autoPET_2022/Tumor_Detection/3D_UNET/Save_Path/df_patients_with_tumors.csv"
-	df_filtered = pd.read_csv(path_df_filtered)
-	path_Output = "/media/sambit/Seagate Expansion Drive/G/Uppsala University/Courses/Semesters/2023/1_January_July/Advanced Scientific Programming with Python/Project/Advanced_Scientific_Programming_with_Python_Project/Output"
 
-	for k in tqdm(range(K)):
-		#print("Cross Valdation for fold: {}".format(k))
-		max_epochs = 1000
-		val_interval = 1
-		best_metric = 0
-		print("Network Initialization")
-		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-		model = UNet(
-					dimensions=3,
-					in_channels=2,
-					out_channels=2,
-					channels=(16, 32, 64, 128, 256),
-					strides=(2, 2, 2, 2),
-					num_res_units=2,
-					norm=Norm.BATCH,
-					dropout=0,
-				).to(device)
-
-		loss_function = DiceLoss(include_background=False, to_onehot_y=True, softmax=True, batch=True)
-		optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00001)
-		lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs)
-		dice_metric = DiceMetric(include_background=False, reduction="mean")
-
-		#Make all the relevant directories
-		make_dirs(path_Output, k)
-		#Dataloader Preparation
-		if k == (5 - 1):
-			df_val = df_filtered[100*k:].reset_index(drop=True)
-		else:
-			df_val = df_filtered[100*k:100*k+100].reset_index(drop=True)
-		df_train = df_filtered[~df_filtered.scan_date.isin(df_val.scan_date)].reset_index(drop=True)
-
-		train_loader, val_loader, val_files = prepare_data(df_train, df_val)
-		print("Length of Train Loader: {} & Validation Loader: {}".format(len(train_loader), len(val_loader)))
-
-		post_pred = Compose([EnsureType(), AsDiscrete(argmax=True, to_onehot=2)])
-		post_label = Compose([EnsureType(), AsDiscrete(to_onehot=2)])
-
-		
-		for epoch in range(max_epochs):
-			#epoch += 7
-			#Training
-			epoch_loss = train(model, train_loader, optimizer, loss_function, device)
-			lr_scheduler.step()
-			#epoch_loss_values.append(epoch_loss)
-			print(f"Training epoch {epoch + 1} average loss: {epoch_loss:.4f}")
-			#Validation
-			if (epoch + 1) % val_interval == 0:
-				metric_values, best_metric_new = validation(epoch, optimizer, post_pred, post_label, model, val_loader, device, dice_metric, metric_values, best_metric, k, val_files, path_Output)
-				best_metric = best_metric_new
-
-			#Save and plot DICE
-			np.save(os.path.join(path_Output, "CV_" + str(k) + "/DICE.npy"), metric_values)
-			path_dice = os.path.join(path_Output, "CV_" + str(k), "epoch_vs_dice.jpg")
-			if len(metric_values) > 2:
-				plot_dice(metric_values, path_dice)
 			
 
 if __name__ == "__main__":
-	main()
-	print("Done")
+	args = parse_args()
+	main(args)
