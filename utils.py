@@ -73,12 +73,31 @@ def train(model, train_loader, optimizer, loss_function, device):
 	return epoch_loss
 
 def get_patient_id(files):
+    """
+    Extracts the patient ID and scan date from a dictionary of PET-CT files.
+
+    Args:
+        files (dict): A dictionary containing the file paths for the PET and CT images.
+
+    Returns:
+        tuple: A tuple containing the patient ID and scan date, in the format (patient_id, scan_date).
+    """
 	pat_scan = files['SUV'].split('PETCT_')[-1]
 	pat_id = 'PETCT_' + pat_scan.split('/')[0]
 	scan_date = pat_scan.split('/')[1]
 	return pat_id, scan_date
 
 def writeTxtLine(input_path, values):
+    """
+    Appends a new line of comma-separated values to a text file.
+
+    Args:
+        input_path (str): The file path of the text file to write to.
+        values (list): A list of values to be written to the file.
+
+    Returns:
+        None: This function does not return anything.
+    """
 	with open(input_path, "a") as f:
 		f.write("\n")
 		f.write("{}".format(values[0]))
