@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 
 def make_dirs(path, k):
 	path_CV = os.path.join(path, "CV_" + str(k))
@@ -13,3 +14,24 @@ def make_dirs(path, k):
 	path_Metrics = os.path.join(path_CV, "Metrics")
 	if not os.path.exists(path_Metrics):
 		os.mkdir(path_Metrics)
+
+def train(model, train_loader, optimizer, loss_function, device):
+	model.train()
+	epoch_loss = 0
+	step = 0
+	for train_data in tqdm(train_loader):
+		step += 1
+		inputs, labels = (
+			train_data["PET_CT"].to(device),
+			train_data["SEG"].to(device),
+		)
+		#print(inputs.shape)
+		optimizer.zero_grad()
+		outputs = model(inputs)
+		loss = loss_function(outputs, labels)
+		loss.backward()
+		optimizer.step()
+		epoch_loss += loss.item()
+	epoch_loss /= step
+
+	return epoch_loss
