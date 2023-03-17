@@ -45,6 +45,13 @@ def get_patient_id(files):
 	scan_date = pat_scan.split('/')[1]
 	return pat_id, scan_date
 
+def writeTxtLine(input_path, values):
+	with open(input_path, "a") as f:
+		f.write("\n")
+		f.write("{}".format(values[0]))
+		for i in range(1, len(values)):
+			f.write(",{}".format(values[i]))
+
 def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
 	"""
 	Computes, DICE, TP, FP, FN.
@@ -85,6 +92,11 @@ def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
 	writeTxtLine(path, [pat_ID,scan_date,disease_type,dice,tp_freq,tp_percent,fp_freq,fp_percent,fn_freq,fn_percent])
 
 	return dice, fp_freq, fn_freq
+
+def save_model(model, epoch, optimizer, k, path_Output):
+	best_metric_epoch = epoch + 1
+	state = {'net': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': best_metric_epoch}
+	torch.save(state, os.path.join(path_Output, "CV_" + str(k) + "/Network_Weights/best_model_{}.pth.tar".format(best_metric_epoch)))
 
 def validation(args, epoch, optimizer, post_pred, post_label, model, val_loader, device, dice_metric, metric_values, best_metric, k, val_files, path_Output):
 	model.eval()
