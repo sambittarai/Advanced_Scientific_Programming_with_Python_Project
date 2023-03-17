@@ -98,6 +98,13 @@ def save_model(model, epoch, optimizer, k, path_Output):
 	state = {'net': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': best_metric_epoch}
 	torch.save(state, os.path.join(path_Output, "CV_" + str(k) + "/Network_Weights/best_model_{}.pth.tar".format(best_metric_epoch)))
 
+def plot_dice(dice, path):
+	epoch = [2 * (i + 1) for i in range(len(dice))]
+	plt.plot(epoch, dice)
+	plt.savefig(path, dpi=400)
+	plt.xlabel("Number of Epochs")
+	plt.ylabel("DICE")
+	
 def validation(args, epoch, optimizer, post_pred, post_label, model, val_loader, device, dice_metric, metric_values, best_metric, k, val_files, path_Output):
 	model.eval()
 	pat_file = 0
