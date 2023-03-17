@@ -16,6 +16,16 @@ import nibabel as nib
 from medpy import metric
 
 def make_dirs(path, k):
+    """
+    Create the directories (such as Network_Weights, MIPs, Metrics) necessary for k-fold cross-validation.
+
+    Args:
+        path (str): The base path where the cross-validation directories will be created.
+        k (int): The number of folds in the cross-validation.
+
+    Returns:
+        None
+    """
 	path_CV = os.path.join(path, "CV_" + str(k))
 	if not os.path.exists(path_CV):
 		os.mkdir(path_CV)
