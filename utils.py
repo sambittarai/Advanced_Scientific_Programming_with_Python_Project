@@ -40,6 +40,19 @@ def make_dirs(path, k):
 		os.mkdir(path_Metrics)
 
 def train(model, train_loader, optimizer, loss_function, device):
+    """
+    Trains a given model on the given training dataset using the specified optimizer and loss function.
+
+    Args:
+        model (torch.nn.Module): The neural network model to be trained.
+        train_loader (monai.data.DataLoader): The data loader containing the training dataset.
+        optimizer (torch.optim.Optimizer): The optimization algorithm to be used during training.
+        loss_function (torch.nn.Module): The loss function to be optimized during training.
+        device (torch.device): The device on which to perform the training.
+
+    Returns:
+        float: The average loss over the entire training epoch.
+    """
 	model.train()
 	epoch_loss = 0
 	step = 0
@@ -57,7 +70,6 @@ def train(model, train_loader, optimizer, loss_function, device):
 		optimizer.step()
 		epoch_loss += loss.item()
 	epoch_loss /= step
-
 	return epoch_loss
 
 def get_patient_id(files):
