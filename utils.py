@@ -105,10 +105,6 @@ def writeTxtLine(input_path, values):
 			f.write(",{}".format(values[i]))
 
 def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
-	"""
-	Computes, DICE, TP, FP, FN.
-	Also Computes the Final Score, i.e. (0.5*DICE + 0.25*FP + 0.25*FN)
-	"""
 	pred = np.where(pred>1, 1, pred)
 
 	if len(np.unique(GT)) == 1:
@@ -146,6 +142,19 @@ def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
 	return dice, fp_freq, fn_freq
 
 def save_model(model, epoch, optimizer, k, path_Output):
+    """
+    Saves the state of the model, optimizer, and epoch to a .pth.tar file at the specified path.
+
+    Parameters:
+    model (torch.nn.Module): PyTorch model to save.
+    epoch (int): Current epoch number.
+    optimizer (torch.optim.Optimizer): Optimizer used for training.
+    k (int): Fold number for cross-validation.
+    path_Output (str): Output path to save the model weights.
+
+    Returns:
+    None
+    """
 	best_metric_epoch = epoch + 1
 	state = {'net': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': best_metric_epoch}
 	torch.save(state, os.path.join(path_Output, "CV_" + str(k) + "/Network_Weights/best_model_{}.pth.tar".format(best_metric_epoch)))
