@@ -1,4 +1,3 @@
-from config import parse_args
 from monai.networks.nets import UNet
 from monai.networks.layers import Norm
 
