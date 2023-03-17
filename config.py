@@ -36,7 +36,12 @@ def parse_args():
     parser.add_argument("--dimensions", default=3, help="Dimension of the UNET.")
     parser.add_argument("--in_channels", default=2, help="Number of input channels.")
     parser.add_argument("--out_channels", default=2, help="Number of segmentation classes.")
+    parser.add_argument("--kernel_channels", default=(16, 32, 64, 128, 256), help="Sequence of kernels.")
+    parser.add_argument("--strides", default=(2, 2, 2, 2), help="Sequence of strides.")
+    parser.add_argument("--residual_units", default=2, help="Number of residual units in the UNET.")
     parser.add_argument("--dropout", default=0.20, help="Dropout Percentage.")
+    
+    #Optimizer
     parser.add_argument("--lr", default=1e-4, help="Learning Rate.")
     parser.add_argument("--weight_decay", default=1e-5, help="Weight Decay.")
     parser.add_argument("--momentum", default=0.99, help="Momentum used in SGD.")
