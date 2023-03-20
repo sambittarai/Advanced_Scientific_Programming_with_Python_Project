@@ -105,6 +105,18 @@ def writeTxtLine(input_path, values):
 			f.write(",{}".format(values[i]))
 
 def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
+    """
+    Compute metrics such as DICE, True positives, False positives, and False negatives.
+
+    Args:
+	GT (numpy array): Contains the ground truth labels for a given patient's scan
+	pred (numpy array): Contains the predicted labels for the same scan
+	pat_ID (str): The ID of the patient
+	scan_date (str): The date of scan
+	path (str): Contains the file path to save the computed metrics
+    Returns:
+        float: The dice score of the given patient scan.
+    """
 	pred = np.where(pred>1, 1, pred)
 
 	if len(np.unique(GT)) == 1:
@@ -139,7 +151,7 @@ def compute_metrics_validation(GT, pred, pat_ID, scan_date, path):
 			f.write("ID,scan_date,DISEASE_TYPE,DICE,TP,TP_%,FP,FP_%,FN,FN_%")
 	writeTxtLine(path, [pat_ID,scan_date,disease_type,dice,tp_freq,tp_percent,fp_freq,fp_percent,fn_freq,fn_percent])
 
-	return dice, fp_freq, fn_freq
+	return dice#, fp_freq, fn_freq
 
 def save_model(model, epoch, optimizer, k, path_Output):
     """
